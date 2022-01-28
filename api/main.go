@@ -8,7 +8,7 @@ import (
 	"scp-app-api/spdbridge"
 )
 
-const verbose = true
+const verbose = false
 
 var port = "14280"
 
