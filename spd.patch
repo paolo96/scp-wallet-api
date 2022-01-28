@@ -1,0 +1,199 @@
+From 1aa095fefce1d3831abbc21ce313cf9badb0e9f7 Mon Sep 17 00:00:00 2001
+From: paolo_mac_book_pro <paolo@96>
+Date: Mon, 24 Jan 2022 05:57:01 +0100
+Subject: [PATCH 1/3] added api endpoint /explorer/addresses/batch
+
+---
+ node/api/explorer.go      | 48 +++++++++++++++++++++++++++++++++++++++
+ node/api/explorer_test.go | 23 +++++++++++++++++++
+ node/api/routes.go        |  1 +
+ 3 files changed, 72 insertions(+)
+
+diff --git a/node/api/explorer.go b/node/api/explorer.go
+index fb0f8c022..c8631af55 100644
+--- a/node/api/explorer.go
++++ b/node/api/explorer.go
+@@ -1,6 +1,7 @@
+ package api
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"net/http"
+ 
+@@ -74,6 +75,28 @@ type (
+ 		Transaction  ExplorerTransaction   `json:"transaction"`
+ 		Transactions []ExplorerTransaction `json:"transactions"`
+ 	}
++
++	// ExplorerAddressesBatchPOSTParams contains the set of addresses to scan
++	ExplorerAddressesBatchPOSTParams struct {
++		Addresses []types.UnlockHash `json:"addresses"`
++	}
++
++	// ExplorerAddressesBatchPOSTResp is the object returned as a response to
++	// a POST request to /explorer/addresses/batch. It contains a slice of
++	// Blocks and Transactions information for each address requested in
++	// ExplorerAddressesBatchPOSTParams, but only if the address has at
++	// least one transaction associated
++	ExplorerAddressesBatchPOSTResp struct {
++		Addresses []ExplorerAddress `json:"addresses"`
++	}
++
++	// ExplorerAddress contains all the available Transactions and Blocks
++	// relevant to an address and its hash
++	ExplorerAddress struct {
++		Address      types.UnlockHash      `json:"address"`
++		Blocks       []ExplorerBlock       `json:"blocks"`
++		Transactions []ExplorerTransaction `json:"transactions"`
++	}
+ )
+ 
+ // buildExplorerTransaction takes a transaction and the height + id of the
+@@ -351,6 +374,31 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, _ *http.Request, ps h
+ 	WriteError(w, Error{"unrecognized hash used as input to /explorer/hash"}, http.StatusBadRequest)
+ }
+ 
++// explorerAddressesBatchHandler handles POST requests to /explorer/addresses/batch.
++func (api *API) explorerAddressesBatchHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
++	var eabpp ExplorerAddressesBatchPOSTParams
++	err := json.NewDecoder(req.Body).Decode(&eabpp)
++	if err != nil {
++		WriteError(w, Error{"invalid parameters: " + err.Error()}, http.StatusBadRequest)
++		return
++	}
++
++	var response ExplorerAddressesBatchPOSTResp
++	for _, hash := range eabpp.Addresses {
++		txids := api.explorer.UnlockHash(hash)
++		if len(txids) != 0 {
++			txns, blocks := api.buildTransactionSet(txids)
++			response.Addresses = append(response.Addresses, ExplorerAddress{
++				Address:      hash,
++				Blocks:       blocks,
++				Transactions: txns,
++			})
++		}
++	}
++
++	WriteJSON(w, response)
++}
++
+ // explorerHandler handles API calls to /explorer
+ func (api *API) explorerHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+ 	facts := api.explorer.LatestBlockFacts()
+diff --git a/node/api/explorer_test.go b/node/api/explorer_test.go
+index 095ac3f5e..b6bdd0a26 100644
+--- a/node/api/explorer_test.go
++++ b/node/api/explorer_test.go
+@@ -1,6 +1,7 @@
+ package api
+ 
+ import (
++	"net/url"
+ 	"testing"
+ 
+ 	"gitlab.com/scpcorp/ScPrime/types"
+@@ -81,3 +82,25 @@ func TestIntegrationExplorerHashGet(t *testing.T) {
+ 		t.Error("wrong block type returned")
+ 	}
+ }
++
++// TestIntegrationExplorerHashGet probes the GET call to /explorer/addresses/batch.
++func TestIntegrationExplorerAddressesBatchGet(t *testing.T) {
++	t.Skip("Explorer has deadlock issues")
++	if testing.Short() {
++		t.SkipNow()
++	}
++	st, err := createServerTester(t.Name())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.server.panicClose()
++
++	var eabpr ExplorerAddressesBatchPOSTResp
++	var params url.Values
++	params.Set("Addresses", "[\""+types.UnlockHash{1}.String()+"\"]")
++	err = st.postAPI("/explorer/addresses/batch", params, &eabpr)
++	if err != nil {
++		t.Fatal(err)
++	}
++
++}
+diff --git a/node/api/routes.go b/node/api/routes.go
+index 99884900c..feb5306f9 100644
+--- a/node/api/routes.go
++++ b/node/api/routes.go
+@@ -57,6 +57,7 @@ func (api *API) buildHTTPRoutes() {
+ 		router.GET("/explorer", api.explorerHandler)
+ 		router.GET("/explorer/blocks/:height", api.explorerBlocksHandler)
+ 		router.GET("/explorer/hashes/:hash", api.explorerHashHandler)
++		router.GET("/explorer/addresses/batch", api.explorerAddressesBatchHandler)
+ 	}
+ 
+ 	// Gateway API Calls
+-- 
+2.24.3 (Apple Git-128)
+
+
+From 74c94f1521b5816a63e0b79a118201a8426a8682 Mon Sep 17 00:00:00 2001
+From: paolo_mac_book_pro <paolo@96>
+Date: Tue, 25 Jan 2022 23:31:52 +0100
+Subject: [PATCH 2/3] changed from GET to POST route
+
+---
+ node/api/routes.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/node/api/routes.go b/node/api/routes.go
+index feb5306f9..36461e60d 100644
+--- a/node/api/routes.go
++++ b/node/api/routes.go
+@@ -57,7 +57,7 @@ func (api *API) buildHTTPRoutes() {
+ 		router.GET("/explorer", api.explorerHandler)
+ 		router.GET("/explorer/blocks/:height", api.explorerBlocksHandler)
+ 		router.GET("/explorer/hashes/:hash", api.explorerHashHandler)
+-		router.GET("/explorer/addresses/batch", api.explorerAddressesBatchHandler)
++		router.POST("/explorer/addresses/batch", api.explorerAddressesBatchHandler)
+ 	}
+ 
+ 	// Gateway API Calls
+-- 
+2.24.3 (Apple Git-128)
+
+
+From a933c6fa6320990fbdd68bfdde94e54d54b1f834 Mon Sep 17 00:00:00 2001
+From: paolo_mac_book_pro <paolo@96>
+Date: Wed, 26 Jan 2022 01:04:10 +0100
+Subject: [PATCH 3/3] added block timestamp to explorer transaction
+
+---
+ node/api/explorer.go | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/node/api/explorer.go b/node/api/explorer.go
+index c8631af55..0f1bad573 100644
+--- a/node/api/explorer.go
++++ b/node/api/explorer.go
+@@ -31,6 +31,7 @@ type (
+ 	ExplorerTransaction struct {
+ 		ID             types.TransactionID `json:"id"`
+ 		Height         types.BlockHeight   `json:"height"`
++		BlockTimestamp types.Timestamp     `json:"blocktimestamp"`
+ 		Parent         types.BlockID       `json:"parent"`
+ 		RawTransaction types.Transaction   `json:"rawtransaction"`
+ 
+@@ -259,7 +260,9 @@ func (api *API) buildTransactionSet(txids []types.TransactionID) (txns []Explore
+ 			// Find the transaction within the block with the correct id.
+ 			for _, t := range block.Transactions {
+ 				if t.ID() == txid {
+-					txns = append(txns, api.buildExplorerTransaction(height, block.ID(), t))
++					foundT := api.buildExplorerTransaction(height, block.ID(), t)
++					foundT.BlockTimestamp = block.Timestamp
++					txns = append(txns, foundT)
+ 					break
+ 				}
+ 			}
+-- 
+2.24.3 (Apple Git-128)
+
