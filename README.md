@@ -18,7 +18,7 @@ To do so the following requirements must be met in order to run it:
 ## TEMPORARY Patch
 *scpwalletapi* needs spd API to expose the endpoint /explorer/addresses/batch which is not included in the current version of spd.
 
-A pull request will be made soon, but for now you can apply [spd.patch](spd.patch) to [ScPrime](https://gitlab.com/scpcorp/ScPrime) and build it from source.
+A pull request [has been made](https://gitlab.com/scpcorp/ScPrime/-/merge_requests/59), but until approved you can apply [spd.patch](spd.patch) to [ScPrime](https://gitlab.com/scpcorp/ScPrime) and build it from source.
 
 ## Get started
 Build the package
