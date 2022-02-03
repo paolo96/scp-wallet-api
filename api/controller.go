@@ -110,8 +110,14 @@ func newTransactionHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 func filterTransactions(params TransactionsBatchParams, explorerAddresses *spdbridge.AddressesBatchResp, unconfirmedTransactions *spdbridge.TransactionPoolResp) (transactions TransactionsBatchResp) {
 
 	for _, explorerAddress := range explorerAddresses.Addresses {
+	expTransactions:
 		for _, explorerTransaction := range explorerAddress.Transactions {
 			transaction := newTransactionFromExplorer(explorerTransaction)
+			for _, currTransaction := range transactions.Transactions {
+				if currTransaction.Id == transaction.Id {
+					continue expTransactions
+				}
+			}
 			transactions.Transactions = append(transactions.Transactions, transaction)
 		}
 	}
