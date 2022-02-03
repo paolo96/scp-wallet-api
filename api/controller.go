@@ -128,6 +128,11 @@ utl:
 			for _, address := range params.Addresses {
 				if output.UnlockHash == address {
 					transaction := newTransactionFromUnconfirmed(unconfirmedTransaction)
+					for _, currTransaction := range transactions.Transactions {
+						if currTransaction.Id == transaction.Id {
+							continue utl
+						}
+					}
 					transactions.Transactions = append(transactions.Transactions, transaction)
 					continue utl
 				}
@@ -138,6 +143,11 @@ utl:
 				for _, filterPublicKey := range params.PublicKeys {
 					if publicKey.Key == filterPublicKey {
 						transaction := newTransactionFromUnconfirmed(unconfirmedTransaction)
+						for _, currTransaction := range transactions.Transactions {
+							if currTransaction.Id == transaction.Id {
+								continue utl
+							}
+						}
 						transactions.Transactions = append(transactions.Transactions, transaction)
 						continue utl
 					}
