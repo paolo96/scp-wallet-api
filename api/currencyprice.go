@@ -7,12 +7,28 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const CMCApiURL = "https://pro-api.coinmarketcap.com"
 const CMCScpId = "4074"
 
+var supportedFiats = []string{
+	"EUR",
+	"JPY",
+	"GBP",
+	"AUD",
+	"CAD",
+	"CHF",
+	"CNY",
+	"HKD",
+	"NZD",
+	"SEK",
+	"INR",
+}
+
 var CMCApiKey = ""
+var GetGeoApiKey = ""
 
 type (
 	CMCQuoteResponse struct {
@@ -25,6 +41,14 @@ type (
 
 	CMCQuoteData struct {
 		Price float64 `json:"price"`
+	}
+
+	GetGetApiConversionResponse struct {
+		Rates map[string]GetGetApiRate `json:"rates"`
+	}
+
+	GetGetApiRate struct {
+		Rate string `json:"rate"`
 	}
 )
 
@@ -74,6 +98,47 @@ func getScpUsdQuote() (*float64, error) {
 
 	} else {
 		return nil, errors.New("CMC response code " + strconv.Itoa(response.StatusCode))
+	}
+
+}
+
+//getFiatExchageRates gets the USD to supportedFiats exchange rates from getgeoapi.com API
+func getFiatExchangeRates() (*GetGetApiConversionResponse, error) {
+
+	currencyList := strings.Join(supportedFiats, ",")
+
+	client := http.Client{}
+	request, err := http.NewRequest("GET", "https://api.getgeoapi.com/v2/currency/convert?api_key="+GetGeoApiKey+"&from=USD&to="+currencyList+"&format=json", nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer response.Body.Close()
+
+	body, e := ioutil.ReadAll(response.Body)
+	if verbose {
+		fmt.Printf("GET getgeoapi RATES -> %v\n", string(body))
+	}
+	if e != nil {
+		return nil, e
+	}
+
+	if response.StatusCode >= 200 && response.StatusCode < 300 {
+
+		var data *GetGetApiConversionResponse
+		e = json.Unmarshal(body, &data)
+		if e != nil {
+			return nil, e
+		}
+
+		return data, nil
+
+	} else {
+		return nil, errors.New("getgeoapi response code " + strconv.Itoa(response.StatusCode))
 	}
 
 }

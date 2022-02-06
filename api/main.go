@@ -15,13 +15,16 @@ var port = "14280"
 func main() {
 
 	if !checkSpd() {
+
+		//TODO improve arguments parsing
 		log.Fatal("spd daemon connection failed, check that:\n" +
 			"- spd API is running at " + spdbridge.SpdApiURL + ":" + spdbridge.SpdApiPort + "\n" +
 			"- spd consensus module is synced\n" +
 			"- spd explorer module is loaded\n" +
 			"- spd transaction pool module is loaded\n" +
 			"- spd.patch has been applied\n" +
-			"Command example: ./scpwalletapi [coinmarketcap api key] [spd api port] [spd api password] [custom port]")
+			"Command example: ./scpwalletapi [coinmarketcap api key] [getgeoapi.com api key] [spd api port] [spd api password] [custom port]")
+
 	}
 
 	StartDataSync()
