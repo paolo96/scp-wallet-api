@@ -102,8 +102,8 @@ func getScpUsdQuote() (*float64, error) {
 
 }
 
-//getFiatExchageRates gets the USD to supportedFiats exchange rates from getgeoapi.com API
-func getFiatExchangeRates() (*GetGetApiConversionResponse, error) {
+//getUsdExchangeRates gets the USD to supportedFiats exchange rates from getgeoapi.com API
+func getUsdExchangeRates() (*map[string]float64, error) {
 
 	currencyList := strings.Join(supportedFiats, ",")
 
@@ -135,7 +135,19 @@ func getFiatExchangeRates() (*GetGetApiConversionResponse, error) {
 			return nil, e
 		}
 
-		return data, nil
+		var result = map[string]float64{}
+		for currency, apiRate := range data.Rates {
+			for _, supportedFiat := range supportedFiats {
+				if supportedFiat == currency {
+					exchangeRate, e := strconv.ParseFloat(apiRate.Rate, 8)
+					if e == nil {
+						result[currency] = exchangeRate
+					}
+					break
+				}
+			}
+		}
+		return &result, nil
 
 	} else {
 		return nil, errors.New("getgeoapi response code " + strconv.Itoa(response.StatusCode))

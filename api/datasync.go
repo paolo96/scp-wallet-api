@@ -7,14 +7,16 @@ import (
 )
 
 const (
-	networkSyncInterval   = 10 * time.Second
-	fiatPriceSyncInterval = 300 * time.Second
+	networkSyncInterval          = 10 * time.Second
+	usdPriceSyncInterval         = 300 * time.Second
+	usdExchangeRatesSyncInterval = 1000 * time.Second
 
 	networkSyncErrorInterval = 60 * time.Second
 )
 
 var networkData *NetworkData = nil
 var usdPrice *float64 = nil
+var exchangeRates *map[string]float64 = nil
 
 //GetNetworkData returns the cached ScPrime network data
 func GetNetworkData() (*NetworkData, error) {
@@ -27,7 +29,6 @@ func GetNetworkData() (*NetworkData, error) {
 		}
 		networkData = newData
 	}
-
 	return networkData, nil
 
 }
@@ -43,8 +44,22 @@ func GetFiatPrice() (*float64, error) {
 		}
 		usdPrice = newData
 	}
-
 	return usdPrice, nil
+
+}
+
+//GetUsdExchangeRates returns the cached USD to supportedFiats exchange rate
+func GetUsdExchangeRates() (*map[string]float64, error) {
+
+	if exchangeRates == nil {
+		newData, err := getUsdExchangeRates()
+		if err != nil {
+			fmt.Printf("Error while fetching usd exchange rates: %v\n", err)
+			return nil, err
+		}
+		exchangeRates = newData
+	}
+	return exchangeRates, nil
 
 }
 
@@ -52,7 +67,8 @@ func GetFiatPrice() (*float64, error) {
 func StartDataSync() {
 
 	go syncNetworkData(nil)
-	go syncFiatQuote()
+	go syncUsdQuote()
+	go syncUsdExchangeRates()
 
 }
 
@@ -82,19 +98,35 @@ func syncNetworkData(changedHeight *func(uint64, uint64)) {
 
 }
 
-func syncFiatQuote() {
+func syncUsdQuote() {
 
 	newData, err := getScpUsdQuote()
 	if err != nil {
 		fmt.Printf("Error while fetching fiat price: %v\n", err)
-		time.Sleep(fiatPriceSyncInterval)
-		go syncFiatQuote()
+		time.Sleep(usdPriceSyncInterval)
+		go syncUsdQuote()
 		return
 	}
 	usdPrice = newData
 
-	time.Sleep(fiatPriceSyncInterval)
-	go syncFiatQuote()
+	time.Sleep(usdPriceSyncInterval)
+	go syncUsdQuote()
+
+}
+
+func syncUsdExchangeRates() {
+
+	newData, err := getUsdExchangeRates()
+	if err != nil {
+		fmt.Printf("Error while fetching usd exchange rates: %v\n", err)
+		time.Sleep(usdExchangeRatesSyncInterval)
+		go syncUsdExchangeRates()
+		return
+	}
+	exchangeRates = newData
+
+	time.Sleep(usdExchangeRatesSyncInterval)
+	go syncUsdExchangeRates()
 
 }
 

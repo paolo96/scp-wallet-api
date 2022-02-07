@@ -12,7 +12,7 @@ func TestGetFiatExchangeRates(t *testing.T) {
 
 	GetGeoApiKey = GetGeoApiKeyTest
 
-	response, e := getFiatExchangeRates()
+	response, e := getUsdExchangeRates()
 	if e != nil {
 		log.Fatal(e)
 	}
