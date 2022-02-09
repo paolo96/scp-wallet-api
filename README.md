@@ -28,11 +28,18 @@ go build -o scpwalletapi ./api
 
 Run it
 ```
-./scpwalletapi [coinmarketcap api key] [spd api port (default 4280)] [spd api password (default empty)] [custom port (default 14280)]
+./scpwalletapi [coinmarketcap api key] [getgeoapi.com api key] [spd api port (default 4280)] [spd api password (default empty)] [custom port (default 14280)]
 ```
 
-## Coinmarketcap API
-To provide a SCP to Fiat exchange rate to the clients, it is recommended although not mandatory to provide a [Coinmarketcap API](https://coinmarketcap.com/api/documentation/v1/) key.
+## Fiat exchange rates
+To provide a SCP to USD exchange rate to the clients, it is recommended although not mandatory to provide a [Coinmarketcap API](https://coinmarketcap.com/api/documentation/v1/) key.
 
 Requests are made every 5 minutes and cached. The API key should be used only for *scpwalletapi*, so that the free Basic plan will be enough, and it will not be Rate limited.
+
+To provide exchange rates for other fiat currencies (such as EUR, GBP, etc), it is also recommended to provide a [getgeoapi.com](https://currency.getgeoapi.com/documentation/) api key.
+
+A free api key will be enough since requests are made every 15 minutes and cached. We don't use the Coinmarketcap API convertion option since every additional currency conversion counts as an additional request and it would be hard to stay below the free tier.
+
+I would like to clarify that I'm not against paying for good APIs, but for this particular project requiring a paid API key to run a server would limit the number of people willing to run one, which would be bad for the future of the project itself.
+
 
