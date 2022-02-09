@@ -19,10 +19,12 @@ func getScPrimeDataHandler(w http.ResponseWriter, r *http.Request, _ httprouter.
 
 	data, _ := GetNetworkData()
 	usdPrice, _ := GetFiatPrice()
+	exchangeRates, _ := GetUsdExchangeRates()
 
 	jsonResp, err := json.Marshal(NetworkDataResponse{
-		NetworkData: data,
-		ScpPrice:    usdPrice,
+		NetworkData:      data,
+		ScpPrice:         usdPrice,
+		USDExchangeRates: exchangeRates,
 	})
 	if err != nil {
 		http.Error(w, standardFailResponse, 500)

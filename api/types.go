@@ -6,8 +6,9 @@ import (
 
 type (
 	NetworkDataResponse struct {
-		ScpPrice    *float64     `json:"scpPrice"`
-		NetworkData *NetworkData `json:"networkData"`
+		ScpPrice         *float64            `json:"scpPrice"`
+		NetworkData      *NetworkData        `json:"networkData"`
+		USDExchangeRates *map[string]float64 `json:"usdExchangeRates"`
 	}
 
 	NewTransactionParams struct {
